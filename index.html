@@ -6,7 +6,6 @@
   <title>AR Pose GLB Overlay</title>
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Import map so GLTFLoader's bare "three" resolves -->
   <script type="importmap">
   {
     "imports": {
@@ -16,7 +15,6 @@
   }
   </script>
 
-  <!-- Your app (pure ESM) -->
   <script type="module" src="./script.js"></script>
 </head>
 <body>
@@ -27,9 +25,15 @@
   </div>
 
   <div id="ui">
-    <h2>AR Pose GLB Demo</h2>
+    <h2>Start AR</h2>
+    <p id="hint">Requires HTTPS + camera permission.</p>
+    <div class="row">
+      <label><input id="rear" type="checkbox" checked /> Use rear camera</label>
+    </div>
     <button id="start">Start</button>
-    <p>* Use HTTPS and allow camera.</p>
+    <p id="error" class="error"></p>
   </div>
+
+  <div id="toast" class="toast" hidden></div>
 </body>
 </html>
