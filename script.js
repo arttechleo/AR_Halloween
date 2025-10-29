@@ -24,20 +24,21 @@ const CONF = {
 /* ---------------- State ---------------- */
 const STATE = {
   running: false,
-  inited: false,           // prevents duplicate init
-  cameraMode: "environment", // rear by default
+  inited: false,
+  cameraMode: "environment",   // rear by default
   landmarker: null,
   mixers: [],
-  stream: null
+  stream: null,
+  anchorsReady: false
 };
 
 /* ---------------- Globals ---------------- */
-let video, overlay, octx, renderer, scene, camera, videoPlane, group;
+let video, overlay, renderer, scene, camera, videoPlane, group;
 let frame = 0, lastResult = null;
 const IDX = { NOSE: 0, LEFT_EYE: 2, RIGHT_EYE: 5, LEFT_SHOULDER: 11, RIGHT_SHOULDER: 12 };
 const anchors = { shoulderL: null, shoulderR: null, back: null, head: null };
 
-/* ---------------- Shortcuts ---------------- */
+/* ---------------- Utilities ---------------- */
 const $ = (sel) => document.querySelector(sel);
 const normX = (x) => x * 2 - 1;
 const normY = (y) => -y * 2 + 1;
@@ -47,6 +48,12 @@ const facePresent = (lm)=> !!(lm[IDX.NOSE] || lm[IDX.LEFT_EYE] || lm[IDX.RIGHT_E
 const setText = (id, val) => { const el=$(id); if (el) el.textContent = val; };
 function toast(msg, ms=2200){ const t=$("#toast"); t.textContent=msg; t.hidden=false; setTimeout(()=>t.hidden=true, ms); }
 
+/* ---- in-app browser detection (iOS app webviews block camera often) ---- */
+function inAppBrowser() {
+  const ua = navigator.userAgent || "";
+  return /(FBAN|FBAV|Instagram|Twitter|Line|WeChat|OKApp|TikTok|Snapchat|Pinterest)/i.test(ua);
+}
+
 /* ---------------- Diagnostics ---------------- */
 function updateDiagnostics({httpsOk, apiOk, perm, status, err}) {
   setText("#d-https", httpsOk ? "OK" : "Not secure (HTTPS required)");
@@ -55,11 +62,12 @@ function updateDiagnostics({httpsOk, apiOk, perm, status, err}) {
   setText("#d-status", status ?? "—");
   setText("#d-err", err ?? "None");
   $("#banner").hidden = !(status === "Camera blocked" || !httpsOk || !apiOk);
+  $("#openSafari").hidden = !inAppBrowser();
 }
 
 /* ---------------- Three ---------------- */
 function setupThree() {
-  if (renderer) return; // idempotent
+  if (renderer) return;
 
   const threeEl = $("#three");
   const r = threeEl.getBoundingClientRect();
@@ -101,7 +109,7 @@ function updateVideoPlaneSize() {
   videoPlane.scale.set(h * aspect, h, 1);
 }
 
-/* ---------------- GLB loader with fallback ---------------- */
+/* ---------------- GLB loader (with fallback cube) ---------------- */
 function loadGLB(url, label) {
   return new Promise((resolve) => {
     new GLTFLoader().load(
@@ -128,10 +136,9 @@ function loadGLB(url, label) {
   });
 }
 
-/* ---------------- Anchors (idempotent) ---------------- */
-let anchorsReady = false;
+/* ---------------- Anchors (load once) ---------------- */
 async function setupAnchors() {
-  if (anchorsReady) return;
+  if (STATE.anchorsReady) return;
   const [m1, m2, m3] = await Promise.all([
     loadGLB(ASSETS.model1, "model1"),
     loadGLB(ASSETS.model2, "model2"),
@@ -142,42 +149,79 @@ async function setupAnchors() {
   anchors.back = m2;
   anchors.head = m3;
   [anchors.shoulderL, anchors.shoulderR, anchors.back, anchors.head].forEach(n => { n.visible = false; group.add(n); });
-  anchorsReady = true;
+  STATE.anchorsReady = true;
 }
 
-/* ---------------- Camera (explicit permission flow) ---------------- */
+/* ---------------- Permission helpers ---------------- */
 async function queryPermission() {
   try {
-    // Not supported in iOS Safari; handled gracefully.
     const res = await navigator.permissions.query({ name: "camera" });
-    return res.state; // 'granted' | 'denied' | 'prompt'
-  } catch {
-    return "unknown";
-  }
+    return res.state; // 'granted'|'denied'|'prompt'
+  } catch { return "unknown"; } // iOS Safari often throws
 }
 
+/* --- robust camera acquisition: rear -> rear-preferred -> any camera --- */
+async function getCameraStream() {
+  const tried = [];
+
+  const tryConstraint = async (c) => {
+    tried.push(JSON.stringify(c));
+    try {
+      const s = await navigator.mediaDevices.getUserMedia(c);
+      return s;
+    } catch (e) {
+      if (e.name === "OverconstrainedError") return null;
+      if (e.name === "NotFoundError") return null;
+      throw e; // NotAllowed/NotReadable/etc propagate
+    }
+  };
+
+  // 1) exact rear
+  let stream = await tryConstraint({ video: { facingMode: { exact: "environment" } }, audio: false });
+  if (stream) return stream;
+
+  // 2) prefer rear
+  stream = await tryConstraint({ video: { facingMode: "environment" }, audio: false });
+  if (stream) return stream;
+
+  // 3) any camera
+  stream = await tryConstraint({ video: true, audio: false });
+  if (stream) return stream;
+
+  return null;
+}
+
+/* Request camera with full UX + fallbacks */
 async function grantCamera() {
   const httpsOk = isSecureContext;
   const apiOk = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-  if (!httpsOk || !apiOk) {
-    updateDiagnostics({ httpsOk, apiOk, perm: "unknown", status: "Camera blocked", err: !httpsOk ? "Not HTTPS" : "API unavailable" });
-    throw new Error(!httpsOk ? "This page is not served over HTTPS." : "Camera API not available in this browser.");
+  const perm = await queryPermission();
+
+  if (inAppBrowser()) {
+    updateDiagnostics({ httpsOk, apiOk, perm, status: "Camera blocked (in-app browser)", err: "Open in Safari" });
+    throw new Error("Open this page in Safari (in-app browsers often block camera).");
   }
 
-  const constraints = { video: { facingMode: STATE.cameraMode, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false };
+  if (!httpsOk || !apiOk) {
+    updateDiagnostics({ httpsOk, apiOk, perm, status: "Camera blocked", err: !httpsOk ? "Not HTTPS" : "API unavailable" });
+    throw new Error(!httpsOk ? "This page is not served over HTTPS." : "Camera API not available.");
+  }
+
   try {
-    STATE.stream = await navigator.mediaDevices.getUserMedia(constraints);
-    video.srcObject = STATE.stream;
-    await video.play(); // user gesture already happened (Grant button)
+    const stream = await getCameraStream();
+    if (!stream) {
+      updateDiagnostics({ httpsOk, apiOk, perm, status: "Camera blocked", err: "No usable camera found" });
+      throw new Error("No usable camera found.");
+    }
+    STATE.stream = stream;
+    video.srcObject = stream;
+    await video.play();
     $("#start").disabled = false;
     updateDiagnostics({ httpsOk, apiOk, perm: "granted or active", status: "Camera ready" });
     toast("Camera granted");
     return true;
   } catch (e) {
-    let msg = "Camera permission denied or unavailable.";
-    if (e.name === "NotAllowedError") msg = "Permission denied. Enable camera for this site in Settings.";
-    if (e.name === "NotFoundError") msg = "No camera found.";
-    if (e.name === "NotReadableError") msg = "Camera is in use by another app.";
+    const msg = (e && e.message) || "Camera permission denied or unavailable.";
     updateDiagnostics({ httpsOk, apiOk, perm: "denied", status: "Camera blocked", err: msg });
     throw new Error(msg);
   }
@@ -222,7 +266,6 @@ async function loop() {
       const offset = Math.max(CONF.shoulderOffsetMin, span * 0.35);
       const hasFace = facePresent(lm);
 
-      // model1.glb on shoulders when face detected
       [anchors.shoulderL, anchors.shoulderR].forEach(n => n.visible = !!hasFace);
       if (hasFace) {
         smoothSet(anchors.shoulderL,  offset, 0, 0);
@@ -233,7 +276,6 @@ async function loop() {
         anchors.shoulderR.scale.setScalar(1.0);
       }
 
-      // model2.glb on back when no face
       anchors.back.visible = !hasFace;
       if (!hasFace) {
         smoothSet(anchors.back, 0, CONF.backYOffset, -0.2);
@@ -241,7 +283,6 @@ async function loop() {
         anchors.back.scale.setScalar(1.2);
       }
 
-      // model3.glb covering head when face detected
       anchors.head.visible = hasFace;
       if (hasFace) {
         const nose = lm[IDX.NOSE] || { x: cx, y: cy - 0.04 };
@@ -264,7 +305,7 @@ async function loop() {
   renderer.render(scene, camera);
 }
 
-/* ---------------- Start (idempotent, no duplicates) ---------------- */
+/* ---------------- Start (guarded) ---------------- */
 async function start() {
   if (STATE.inited) { toast("Already running"); return; }
   STATE.inited = true;
@@ -274,10 +315,9 @@ async function start() {
 
   video = $("#video");
   overlay = $("#overlay");
-  octx = overlay.getContext("2d");
 
-  overlay.width = video.videoWidth || 1280;
-  overlay.height = video.videoHeight || 720;
+  overlay.width = 1280;
+  overlay.height = 720;
 
   setupThree();
   await setupPose();
@@ -287,23 +327,25 @@ async function start() {
   loop();
 }
 
-/* ---------------- UI and Permission Flow ---------------- */
+/* ---------------- UI ---------------- */
 window.addEventListener("DOMContentLoaded", async () => {
-  // Diagnostics
   const httpsOk = isSecureContext;
   const apiOk = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   let perm = await queryPermission().catch(()=> "unknown");
   updateDiagnostics({ httpsOk, apiOk, perm, status: "Idle" });
 
-  // Camera toggle
   const rearBox = $("#rear");
-  rearBox.checked = (STATE.cameraMode === "environment");
+  rearBox.checked = true;
   rearBox.addEventListener("change", (e) => {
     STATE.cameraMode = e.target.checked ? "environment" : "user";
     toast(`Camera: ${STATE.cameraMode === "environment" ? "rear" : "front"}`);
   }, { passive:true });
 
-  // Grant camera first (explicit user gesture)
+  $("#openSafari").addEventListener("click", () => {
+    // best-effort prompt to open in Safari
+    window.location.href = window.location.href.replace(/^https?:\/\//, "https://");
+  });
+
   $("#grant").addEventListener("click", async () => {
     try {
       setText("#d-status", "Requesting camera…");
@@ -316,6 +358,5 @@ window.addEventListener("DOMContentLoaded", async () => {
     }
   }, { passive:true });
 
-  // Then start AR (second gesture; ensures iOS autoplay compliance)
   $("#start").addEventListener("click", start, { passive:true });
 });
