@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <meta
     name="viewport"
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
   />
   <title>AR Pose GLB Overlay</title>
   <link rel="stylesheet" href="style.css" />
-  <!-- TFJS + Pose Detection (UMD, global) -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@3.1.0/dist/pose-detection.js"></script>
-  <!-- Three.js (ESM) -->
-  <script type="module">
-    import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
-    import { GLTFLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
-    window.THREE = THREE;
-    window.GLTFLoader = GLTFLoader;
+
+  <!-- Map bare specifier "three" to a URL so GLTFLoader works in the browser -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/examples/jsm/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
   </script>
+
+  <!-- Your app (pure ESM) -->
   <script type="module" src="./script.js"></script>
 </head>
 <body>
