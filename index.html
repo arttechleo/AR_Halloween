@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+  />
+  <title>AR Pose GLB Overlay</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- TFJS + Pose Detection (UMD, global) -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@3.1.0/dist/pose-detection.js"></script>
+  <!-- Three.js (ESM) -->
+  <script type="module">
+    import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+    import { GLTFLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/GLTFLoader.js";
+    window.THREE = THREE;
+    window.GLTFLoader = GLTFLoader;
+  </script>
+  <script type="module" src="./script.js"></script>
+</head>
+<body>
+  <div id="ar">
+    <video id="video" autoplay playsinline muted></video>
+    <div id="three"></div>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div id="ui">
+    <h2>AR Pose GLB Demo</h2>
+    <button id="start">Start</button>
+    <p>* Use HTTPS and allow camera.</p>
+  </div>
+</body>
+</html>
