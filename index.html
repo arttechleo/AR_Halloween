@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta
+    name="viewport"
+    content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no"
+  />
   <title>AR Pose GLB Overlay</title>
   <link rel="stylesheet" href="style.css" />
 
@@ -26,14 +29,33 @@
 
   <div id="ui">
     <h2>Start AR</h2>
-    <p id="hint">Requires HTTPS + camera permission.</p>
+    <ol class="steps">
+      <li>Use HTTPS (lock icon in the address bar).</li>
+      <li>Tap <b>Grant Camera</b> and choose <b>Allow</b>.</li>
+      <li>If denied, enable camera in your browser’s site settings and reload.</li>
+    </ol>
+
     <div class="row">
       <label><input id="rear" type="checkbox" checked /> Use rear camera</label>
     </div>
-    <button id="start">Start</button>
+
+    <div class="row">
+      <button id="grant">Grant Camera</button>
+      <button id="start" disabled>Start</button>
+    </div>
+
+    <div id="diag">
+      <div><b>HTTPS:</b> <span id="d-https">—</span></div>
+      <div><b>Camera API:</b> <span id="d-api">—</span></div>
+      <div><b>Permission:</b> <span id="d-perm">—</span></div>
+      <div><b>Status:</b> <span id="d-status">Idle</span></div>
+      <div class="small"><b>Last error:</b> <span id="d-err">None</span></div>
+    </div>
+
     <p id="error" class="error"></p>
   </div>
 
   <div id="toast" class="toast" hidden></div>
+  <div id="banner" class="banner" hidden>Camera is blocked. See steps above.</div>
 </body>
 </html>
