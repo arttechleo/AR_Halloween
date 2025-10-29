@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no" />
-  <title>AR Pose GLB Overlay</title>
+  <meta name="viewport"
+        content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no" />
+  <title>AR Halloween</title>
   <link rel="stylesheet" href="style.css" />
-
   <script type="importmap">
   {
     "imports": {
@@ -14,52 +14,20 @@
     }
   }
   </script>
-
   <script type="module" src="./script.js"></script>
 </head>
 <body>
-  <div id="ar">
-    <video id="video" autoplay playsinline muted></video>
+  <div id="ar-root">
+    <video id="video" playsinline muted autoplay></video>
     <div id="three"></div>
     <canvas id="overlay"></canvas>
   </div>
 
-  <div id="ui">
-    <h2>Start AR</h2>
-    <ol class="steps">
-      <li>Use <b>HTTPS</b> (lock icon).</li>
-      <li>Tap <b>Grant Camera</b> → choose <b>Allow</b>.</li>
-      <li>If it still says blocked:
-        <ul>
-          <li>Safari: tap <b>aA ▸ Website Settings ▸ Camera ▸ Allow</b>, then reload.</li>
-          <li>Settings ▸ Safari ▸ Camera ▸ <b>Allow</b>.</li>
-          <li>Open this page in <b>Safari</b>, not inside other apps (Instagram/TikTok/etc.).</li>
-        </ul>
-      </li>
-    </ol>
-
-    <div class="row">
-      <label><input id="rear" type="checkbox" checked /> Use rear camera</label>
-    </div>
-
-    <div class="row">
-      <button id="grant">Grant Camera</button>
-      <button id="start" disabled>Start</button>
-      <button id="openSafari" class="secondary" hidden>Open in Safari</button>
-    </div>
-
-    <div id="diag">
-      <div><b>HTTPS:</b> <span id="d-https">—</span></div>
-      <div><b>Camera API:</b> <span id="d-api">—</span></div>
-      <div><b>Permission:</b> <span id="d-perm">—</span></div>
-      <div><b>Status:</b> <span id="d-status">Idle</span></div>
-      <div class="small"><b>Last error:</b> <span id="d-err">None</span></div>
-    </div>
-
-    <p id="error" class="error"></p>
+  <div id="overlay-ui">
+    <h1>Start AR</h1>
+    <p class="hint">Use HTTPS and allow camera. Works best in Safari (not in-app browsers).</p>
+    <button id="start">Start</button>
+    <p id="err" class="err"></p>
   </div>
-
-  <div id="toast" class="toast" hidden></div>
-  <div id="banner" class="banner" hidden>Camera is blocked. See steps above.</div>
 </body>
 </html>
