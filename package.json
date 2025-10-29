@@ -1,0 +1,16 @@
+{
+  "name": "ar-halloween",
+  "version": "1.0.0",
+  "description": "AR Halloween project using Vite + Three.js + MediaPipe",
+  "main": "script.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.160.0",
+    "@mediapipe/tasks-vision": "^0.10.10",
+    "vite": "^5.0.0"
+  }
+}
