@@ -2,10 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta
-    name="viewport"
-    content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no"
-  />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover,user-scalable=no" />
   <title>AR Pose GLB Overlay</title>
   <link rel="stylesheet" href="style.css" />
 
@@ -30,9 +27,15 @@
   <div id="ui">
     <h2>Start AR</h2>
     <ol class="steps">
-      <li>Use HTTPS (lock icon in the address bar).</li>
-      <li>Tap <b>Grant Camera</b> and choose <b>Allow</b>.</li>
-      <li>If denied, enable camera in your browser’s site settings and reload.</li>
+      <li>Use <b>HTTPS</b> (lock icon).</li>
+      <li>Tap <b>Grant Camera</b> → choose <b>Allow</b>.</li>
+      <li>If it still says blocked:
+        <ul>
+          <li>Safari: tap <b>aA ▸ Website Settings ▸ Camera ▸ Allow</b>, then reload.</li>
+          <li>Settings ▸ Safari ▸ Camera ▸ <b>Allow</b>.</li>
+          <li>Open this page in <b>Safari</b>, not inside other apps (Instagram/TikTok/etc.).</li>
+        </ul>
+      </li>
     </ol>
 
     <div class="row">
@@ -42,6 +45,7 @@
     <div class="row">
       <button id="grant">Grant Camera</button>
       <button id="start" disabled>Start</button>
+      <button id="openSafari" class="secondary" hidden>Open in Safari</button>
     </div>
 
     <div id="diag">
